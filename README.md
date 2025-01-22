@@ -103,6 +103,6 @@ Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için `LICENSE` dosy
 
 ## İletişim
 
-Proje Sahibi - [@github_kullanici](https://github.com/github_kullanici)
+Proje Sahibi - [@DogukanBaygut](https://github.com/DogukanBaygut)
 
-Proje Linki: [https://github.com/kullanici_adi/agri-edge](https://github.com/kullanici_adi/agri-edge)
+Proje Linki: [https://github.com/DogukanBaygut/AGRIEDGE-PathPlanner](https://github.com/DogukanBaygut/AGRIEDGE-PathPlanner)
