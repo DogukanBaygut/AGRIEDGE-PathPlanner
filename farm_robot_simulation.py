@@ -1,3 +1,13 @@
+import sys
+import os
+
+# Modül yolunu ekle
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# Sonra importları yap
+from widgets import StatisticsWidget, SensorWidget
+from irrigation.widget import IrrigationWidget
+
 import numpy as np
 import heapq
 import matplotlib.pyplot as plt
@@ -12,9 +22,11 @@ from planners.planner_type import PlannerType
 import tkinter as tk
 from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QVBoxLayout, 
-                            QWidget, QLabel, QHBoxLayout, QFrame, QTabWidget,
-                            QProgressBar, QGridLayout)
+from PyQt5.QtWidgets import (
+    QApplication, QMainWindow, QPushButton, QVBoxLayout, 
+    QWidget, QLabel, QHBoxLayout, QFrame, QTabWidget,
+    QProgressBar, QGridLayout, QSizePolicy
+)
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont, QIcon
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -427,432 +439,6 @@ class FarmRobot:
         ax.set_ylim(-margin, self.grid_size[0] + margin)
         ax.set_zlim(base_height - 0.05, base_height + 0.08)
 
-class StatisticsWidget(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.layout = QVBoxLayout(self)
-        
-        # İstatistik kartları için frame
-        stats_frame = QFrame()
-        stats_frame.setObjectName("statsFrame")
-        stats_layout = QHBoxLayout(stats_frame)
-        
-        # İstatistik kartları - değerleri ayrı değişkenlerde tut
-        self.work_time_value = "124"
-        self.area_value = "450"
-        self.energy_value = "85"
-        self.efficiency_value = "92"
-        
-        # Kartları oluştur
-        self.create_stat_card("Toplam Çalışma Süresi", f"{self.work_time_value} saat", "⏱️", stats_layout)
-        self.create_stat_card("İşlenen Alan", f"{self.area_value} m²", "🌾", stats_layout)
-        self.create_stat_card("Enerji Tüketimi", f"{self.energy_value} kWh", "⚡", stats_layout)
-        self.create_stat_card("Verimlilik", f"%{self.efficiency_value}", "📈", stats_layout)
-        
-        self.layout.addWidget(stats_frame)
-        
-        # Grafik konteyner
-        graphs_container = QFrame()
-        graphs_container.setObjectName("graphsContainer")
-        graphs_layout = QHBoxLayout(graphs_container)
-        
-        # Çalışma Süresi Grafiği
-        self.working_hours_chart = self.create_working_hours_chart()
-        graphs_layout.addWidget(self.working_hours_chart)
-        
-        # Batarya Kullanımı Grafiği
-        self.battery_usage_chart = self.create_battery_usage_chart()
-        graphs_layout.addWidget(self.battery_usage_chart)
-        
-        self.layout.addWidget(graphs_container)
-        
-        # CSS Stilleri
-        self.setStyleSheet("""
-            QFrame#statsFrame {
-                background-color: #2C3E50;
-                border-radius: 15px;
-                padding: 20px;
-                margin: 10px;
-            }
-            QFrame#graphsContainer {
-                background-color: #2C3E50;
-                border-radius: 15px;
-                padding: 20px;
-                margin: 10px;
-            }
-            QFrame.stat-card {
-                background-color: #34495E;
-                border-radius: 10px;
-                padding: 15px;
-                margin: 5px;
-            }
-            QLabel {
-                color: white;
-            }
-            QLabel.stat-value {
-                font-size: 24px;
-                font-weight: bold;
-                color: #3498DB;
-            }
-            QLabel.stat-title {
-                font-size: 14px;
-                color: #BDC3C7;
-            }
-            QLabel.stat-icon {
-                font-size: 32px;
-            }
-        """)
-
-    def create_stat_card(self, title, value, icon, parent_layout):
-        card = QFrame()
-        card.setObjectName("statCard")
-        card.setProperty("class", "stat-card")
-        layout = QVBoxLayout(card)
-        
-        # İkon
-        icon_label = QLabel(icon)
-        icon_label.setProperty("class", "stat-icon")
-        icon_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(icon_label)
-        
-        # Değer
-        value_label = QLabel(value)
-        value_label.setProperty("class", "stat-value")
-        value_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(value_label)
-        
-        # Başlık - ID ekle
-        title_label = QLabel(title)
-        title_label.setObjectName(title.lower().replace(" ", "_"))  # ID ekle
-        title_label.setProperty("class", "stat-title")
-        title_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(title_label)
-        
-        parent_layout.addWidget(card)
-
-    def create_working_hours_chart(self):
-        fig = Figure(figsize=(6, 4))
-        canvas = FigureCanvas(fig)
-        ax = fig.add_subplot(111)
-        
-        # Test verileri
-        dates = [datetime.now() - timedelta(days=x) for x in range(7)]
-        hours = [random.uniform(6, 10) for _ in range(7)]
-        
-        # Grafik ayarları
-        ax.bar(dates, hours, color='#3498DB', alpha=0.7)
-        ax.set_title('Günlük Çalışma Saatleri', color='white', pad=20)
-        ax.set_facecolor('#2C3E50')
-        fig.patch.set_facecolor('#2C3E50')
-        
-        # X ekseni format
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
-        ax.tick_params(colors='white')
-        
-        # Izgara
-        ax.grid(True, linestyle='--', alpha=0.3)
-        
-        fig.tight_layout()
-        return canvas
-
-    def create_battery_usage_chart(self):
-        fig = Figure(figsize=(6, 4))
-        canvas = FigureCanvas(fig)
-        ax = fig.add_subplot(111)
-        
-        # Test verileri
-        hours = list(range(24))
-        battery_levels = [random.uniform(60, 100) for _ in range(24)]
-        
-        # Grafik ayarları
-        ax.plot(hours, battery_levels, color='#2ECC71', linewidth=2)
-        ax.fill_between(hours, battery_levels, alpha=0.2, color='#2ECC71')
-        ax.set_title('24 Saatlik Batarya Kullanımı (%)', color='white', pad=20)
-        ax.set_facecolor('#2C3E50')
-        fig.patch.set_facecolor('#2C3E50')
-        
-        # Eksen ayarları
-        ax.tick_params(colors='white')
-        ax.set_xlim(0, 23)
-        ax.set_ylim(0, 100)
-        
-        # Izgara
-        ax.grid(True, linestyle='--', alpha=0.3)
-        
-        fig.tight_layout()
-        return canvas
-
-    def update_translations(self, texts):
-        # İstatistik kartlarının başlıklarını güncelle
-        total_work = self.findChild(QLabel, "toplam_çalışma_süresi")
-        if total_work:
-            total_work.setText(texts["total_work_time"])
-            # Değeri güncelle
-            value_label = total_work.parent().findChild(QLabel, "stat-value")
-            if value_label:
-                value_label.setText(f"{self.work_time_value} {texts['hours']}")
-            
-        processed_area = self.findChild(QLabel, "işlenen_alan")
-        if processed_area:
-            processed_area.setText(texts["processed_area"])
-            # Değeri güncelle
-            value_label = processed_area.parent().findChild(QLabel, "stat-value")
-            if value_label:
-                value_label.setText(f"{self.area_value} m²")
-            
-        energy = self.findChild(QLabel, "enerji_tüketimi")
-        if energy:
-            energy.setText(texts["energy_consumption"])
-            # Değeri güncelle
-            value_label = energy.parent().findChild(QLabel, "stat-value")
-            if value_label:
-                value_label.setText(f"{self.energy_value} kWh")
-            
-        efficiency = self.findChild(QLabel, "verimlilik")
-        if efficiency:
-            efficiency.setText(texts["efficiency"])
-            # Değeri güncelle
-            value_label = efficiency.parent().findChild(QLabel, "stat-value")
-            if value_label:
-                value_label.setText(f"%{self.efficiency_value}")
-
-        # Grafik başlıklarını güncelle
-        if hasattr(self, 'working_hours_chart'):
-            fig = self.working_hours_chart.figure
-            ax = fig.axes[0]
-            ax.set_title(texts["working_hours"], color='white', pad=20)
-            self.working_hours_chart.draw()
-
-        if hasattr(self, 'battery_usage_chart'):
-            fig = self.battery_usage_chart.figure
-            ax = fig.axes[0]
-            ax.set_title(texts["battery_usage"], color='white', pad=20)
-            self.battery_usage_chart.draw()
-
-class SensorWidget(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.layout = QVBoxLayout(self)
-        self.layout.setSpacing(5)  # Daha az boşluk
-        self.layout.setContentsMargins(5, 5, 5, 5)  # Daha az kenar boşluğu
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.update_sensor_values)
-        self.timer.start(1000)  # Her 1 saniyede güncelle
-        
-        # Sensör kartları için frame
-        sensors_frame = QFrame()
-        sensors_frame.setObjectName("sensorsFrame")
-        sensors_layout = QGridLayout(sensors_frame)
-        sensors_layout.setSpacing(5)  # Grid boşluklarını azalt
-        sensors_layout.setContentsMargins(5, 5, 5, 5)
-        
-        # Toprak Nem Sensörü
-        self.moisture_value = QProgressBar()
-        self.moisture_value.setRange(0, 100)
-        self.create_sensor_card("Toprak Nemi", "💧", self.moisture_value, 
-                              "Nem Seviyesi: %", sensors_layout, 0, 0)
-        
-        # Hava Sıcaklığı
-        self.temp_value = QLabel("24°C")
-        self.create_sensor_card("Hava Sıcaklığı", "🌡️", self.temp_value, 
-                              "Sıcaklık", sensors_layout, 0, 1)
-        
-        # Nem Oranı
-        self.humidity_value = QLabel("%65")
-        self.create_sensor_card("Nem Oranı", "💨", self.humidity_value, 
-                              "Bağıl Nem", sensors_layout, 1, 0)
-        
-        # Işık Seviyesi
-        self.light_value = QProgressBar()
-        self.light_value.setRange(0, 100)
-        self.create_sensor_card("Işık Seviyesi", "☀️", self.light_value, 
-                              "Lümen: ", sensors_layout, 1, 1)
-        
-        self.layout.addWidget(sensors_frame)
-        
-        # Kamera görüntüsü için frame
-        camera_frame = QFrame()
-        camera_frame.setObjectName("cameraFrame")
-        camera_layout = QVBoxLayout(camera_frame)
-        camera_layout.setSpacing(5)
-        camera_layout.setContentsMargins(10, 10, 10, 10)  # Kenar boşluklarını artır
-        
-        # Kamera başlığı
-        camera_title = QLabel("🎥 Canlı Kamera Görüntüsü")
-        camera_title.setAlignment(Qt.AlignCenter)
-        camera_title.setStyleSheet("font-size: 14px; color: #2ecc71; margin: 5px;")  # Font boyutunu artır
-        camera_layout.addWidget(camera_title)
-        
-        # Test için kamera görüntüsü (gri ekran)
-        camera_view = QLabel()
-        camera_view.setMinimumSize(300, 200)  # Minimum boyutu artır
-        camera_view.setMaximumSize(800, 500)  # Maximum boyutu artır
-        camera_view.setStyleSheet("""
-            background-color: #34495e; 
-            border-radius: 8px;
-            font-size: 12px;
-            color: #95a5a6;
-            padding: 10px;
-        """)
-        camera_view.setAlignment(Qt.AlignCenter)
-        camera_view.setText("Kamera Görüntüsü Bekleniyor...")
-        camera_layout.addWidget(camera_view, alignment=Qt.AlignCenter)  # Merkeze hizala
-        
-        self.layout.addWidget(camera_frame, alignment=Qt.AlignCenter)  # Frame'i merkeze hizala
-        
-        # CSS Stilleri güncelleme
-        self.setStyleSheet("""
-            QFrame {
-                background: rgba(46, 204, 113, 0.1);
-                border: 1px solid rgba(46, 204, 113, 0.2);
-                border-radius: 8px;
-                padding: 8px;
-                margin: 2px;
-            }
-            QLabel {
-                color: #ecf0f1;
-                font-size: 12px;
-            }
-            QProgressBar {
-                border: 1px solid #2ecc71;
-                border-radius: 4px;
-                text-align: center;
-                background-color: #2C3E50;
-                min-height: 25px;        /* Progress bar yüksekliğini artır */
-                max-height: 25px;
-                font-size: 12px;         /* Font boyutunu artır */
-                font-weight: bold;
-            }
-            QProgressBar::chunk {
-                background-color: #2ecc71;
-                border-radius: 3px;
-            }
-            .sensor-value {
-                font-size: 18px;         /* Değer font boyutunu artır */
-                font-weight: bold;
-                color: #2ecc71;
-                margin: 3px;
-                min-height: 25px;        /* Minimum yükseklik ekle */
-            }
-            .sensor-title {
-                font-size: 14px;         /* Başlık font boyutunu artır */
-                color: #ecf0f1;
-                margin-top: 3px;
-                min-height: 20px;        /* Minimum yükseklik ekle */
-            }
-            .sensor-icon {
-                font-size: 24px;         /* İkon boyutunu artır */
-                margin: 5px;
-                background: rgba(46, 204, 113, 0.1);
-                border: 1px solid rgba(46, 204, 113, 0.3);
-                border-radius: 15px;
-                padding: 8px;
-                min-width: 40px;         /* Genişliği artır */
-                min-height: 40px;        /* Yüksekliği artır */
-            }
-            .sensor-unit {
-                font-size: 12px;
-                color: #95a5a6;
-                margin-top: 2px;
-                min-height: 15px;        /* Minimum yükseklik ekle */
-            }
-            QFrame#sensorCard {
-                background-color: #16213e;
-                border-radius: 8px;
-                padding: 10px;
-                margin: 5px;
-            }
-        """)
-
-    def create_sensor_card(self, title, icon, value_widget, unit, parent_layout, row, col):
-        card = QFrame()
-        card.setObjectName("sensorCard")
-        layout = QVBoxLayout(card)
-        layout.setSpacing(2)
-        layout.setContentsMargins(3, 3, 3, 3)
-        
-        # İkon ve başlık için container
-        header_container = QFrame()
-        header_layout = QHBoxLayout(header_container)
-        header_layout.setSpacing(5)
-        header_layout.setContentsMargins(2, 2, 2, 2)
-        
-        # İkon
-        icon_label = QLabel(icon)
-        icon_label.setProperty("class", "sensor-icon")
-        icon_label.setAlignment(Qt.AlignCenter)
-        header_layout.addWidget(icon_label)
-        
-        # Başlık - Benzersiz ID ekle
-        title_label = QLabel(title)
-        title_id = title.lower().replace(" ", "_").replace("ı", "i").replace("ş", "s")
-        title_label.setObjectName(title_id)
-        title_label.setProperty("class", "sensor-title")
-        title_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        header_layout.addWidget(title_label)
-        header_layout.addStretch()
-        
-        layout.addWidget(header_container)
-        
-        # Değer container
-        value_container = QFrame()
-        value_layout = QVBoxLayout(value_container)
-        value_layout.setSpacing(2)
-        value_layout.setContentsMargins(2, 2, 2, 2)
-        
-        # Değer widget'ına ID ekle
-        if isinstance(value_widget, QProgressBar):
-            value_widget.setFixedHeight(25)
-            value_widget.setTextVisible(True)
-            value_widget.setFormat(f"{unit}%v")
-            value_widget.setObjectName(f"{title_id}_value")
-        else:
-            value_widget.setProperty("class", "sensor-value")
-            value_widget.setAlignment(Qt.AlignCenter)
-            value_widget.setObjectName(f"{title_id}_value")
-        
-        value_layout.addWidget(value_widget)
-        
-        # Birim etiketi
-        if not isinstance(value_widget, QProgressBar):
-            unit_label = QLabel(unit)
-            unit_label.setProperty("class", "sensor-unit")
-            unit_label.setAlignment(Qt.AlignCenter)
-            unit_label.setObjectName(f"{title_id}_unit")
-            value_layout.addWidget(unit_label)
-        
-        layout.addWidget(value_container)
-        parent_layout.addWidget(card, row, col)
-
-    def update_sensor_values(self):
-        # Test için rastgele değerler
-        self.moisture_value.setValue(random.randint(30, 80))
-        self.temp_value.setText(f"{random.randint(20, 30)}°C")
-        self.humidity_value.setText(f"%{random.randint(50, 90)}")
-        self.light_value.setValue(random.randint(40, 100))
-
-    def update_translations(self, texts):
-        """Sensör başlıklarını güncelle - null kontrolü ile"""
-        # Toprak nemi
-        soil_moisture = self.findChild(QLabel, "toprak_nemi")
-        if soil_moisture:
-            soil_moisture.setText(texts["soil_moisture"])
-        
-        # Hava sıcaklığı
-        air_temp = self.findChild(QLabel, "hava_sicakligi")
-        if air_temp:
-            air_temp.setText(texts["air_temp"])
-        
-        # Nem oranı
-        humidity = self.findChild(QLabel, "nem_orani")
-        if humidity:
-            humidity.setText(texts["humidity"])
-        
-        # Işık seviyesi
-        light_level = self.findChild(QLabel, "isik_seviyesi")
-        if light_level:
-            light_level.setText(texts["light_level"])
-
 class FarmRobotGUI(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -892,7 +478,13 @@ class FarmRobotGUI(QMainWindow):
                 "humidity": "Nem Oranı",
                 "light_level": "Işık Seviyesi",
                 "hours": "saat",
-                "camera_view": "Kamera Görüntüsü Bekleniyor..."
+                "camera_view": "Kamera Görüntüsü Bekleniyor...",
+                "temp_map": "Sıcaklık Haritası",
+                "humidity_map": "Nem Haritası",
+                "irrigation_prediction": "Sulama Tahmini",
+                "irrigation_priority": "Sulama Önceliği",
+                "reasons": "Nedenler",
+                "no_irrigation_needed": "Sulama gerekmiyor"
             },
             "en": {
                 "title": "AgriEDGE",
@@ -923,7 +515,13 @@ class FarmRobotGUI(QMainWindow):
                 "humidity": "Humidity",
                 "light_level": "Light Level",
                 "hours": "hours",
-                "camera_view": "Waiting for Camera Feed..."
+                "camera_view": "Waiting for Camera Feed...",
+                "temp_map": "Temperature Map",
+                "humidity_map": "Humidity Map",
+                "irrigation_prediction": "Irrigation Prediction",
+                "irrigation_priority": "Irrigation Priority",
+                "reasons": "Reasons",
+                "no_irrigation_needed": "No irrigation needed"
             }
         }
 
@@ -983,6 +581,8 @@ class FarmRobotGUI(QMainWindow):
             "dark": f"""
                 QMainWindow {{ background-color: #1a1a2e; }}
                 QFrame {{ border: none; }}
+                QLabel {{ color: white; }}  /* Tüm labellar için beyaz renk */
+                
                 #headerPanel, #controlPanel {{ 
                     background-color: #16213e;
                     border-radius: 10px;
@@ -992,9 +592,55 @@ class FarmRobotGUI(QMainWindow):
                     font-size: 24px;
                     font-weight: bold;
                 }}
-                #subtitle, #connectionStatus {{ 
+                #subtitle {{ 
                     color: #a2a2a2;
                     font-size: 13px;
+                }}
+                #connectionStatus {{ 
+                    color: #a2a2a2;
+                    font-size: 13px;
+                    padding: 5px 15px;
+                    background: rgba(78, 204, 163, 0.1);
+                    border-radius: 15px;
+                }}
+                #sectionHeader {{ 
+                    color: #4ecca3;
+                    font-size: 16px;
+                    font-weight: bold;
+                }}
+                #taskStatus {{ 
+                    color: #a2a2a2;
+                    font-size: 13px;
+                }}
+                #mapTitle {{
+                    color: white;
+                    font-size: 14px;
+                    font-weight: bold;
+                    margin: 5px;
+                }}
+                #mapsContainer {{
+                    background-color: #16213e;
+                    border-radius: 10px;
+                    padding: 15px;
+                }}
+                .sensor-title {{
+                    color: white;
+                    font-size: 13px;
+                    font-weight: bold;
+                }}
+                .sensor-value {{
+                    color: white;
+                    font-size: 20px;
+                    font-weight: bold;
+                }}
+                .sensor-unit {{
+                    color: #a2a2a2;
+                    font-size: 12px;
+                }}
+                #sensorCard {{
+                    background-color: #16213e;
+                    border-radius: 8px;
+                    padding: 10px;
                 }}
                 {self.button_styles}
             """,
@@ -1011,9 +657,55 @@ class FarmRobotGUI(QMainWindow):
                     font-size: 24px;
                     font-weight: bold;
                 }}
-                #subtitle, #connectionStatus {{ 
+                #subtitle {{ 
                     color: #555555;
                     font-size: 13px;
+                }}
+                #connectionStatus {{ 
+                    color: #555555;
+                    font-size: 13px;
+                    padding: 5px 15px;
+                    background: rgba(78, 204, 163, 0.1);
+                    border-radius: 15px;
+                }}
+                #sectionHeader {{ 
+                    color: #4ecca3;
+                    font-size: 16px;
+                    font-weight: bold;
+                }}
+                #taskStatus {{ 
+                    color: #555555;
+                    font-size: 13px;
+                }}
+                #mapTitle {{
+                    color: #555555;
+                    font-size: 14px;
+                    font-weight: bold;
+                    margin: 5px;
+                }}
+                #mapsContainer {{
+                    background-color: #ffffff;
+                    border-radius: 10px;
+                    padding: 15px;
+                }}
+                .sensor-title {{
+                    color: #555555;
+                    font-size: 13px;
+                    font-weight: bold;
+                }}
+                .sensor-value {{
+                    color: #555555;
+                    font-size: 20px;
+                    font-weight: bold;
+                }}
+                .sensor-unit {{
+                    color: #555555;
+                    font-size: 12px;
+                }}
+                #sensorCard {{
+                    background-color: #ffffff;
+                    border-radius: 8px;
+                    padding: 10px;
                 }}
                 {self.button_styles}
             """
@@ -1147,6 +839,10 @@ class FarmRobotGUI(QMainWindow):
         self.tab_widget.addTab(stats_widget, "İstatistikler")
         self.tab_widget.addTab(sensor_widget, "Sensörler")
 
+        # Sulama widget'ını ekle
+        irrigation_widget = IrrigationWidget()
+        self.tab_widget.addTab(irrigation_widget, "Sulama Tahmini")
+
         # Tab widget stilini ekle
         self.setStyleSheet("""
             QTabWidget::pane {
@@ -1227,97 +923,27 @@ class FarmRobotGUI(QMainWindow):
 
         # Ana stilleri ekle
         self.setStyleSheet("""
-            QMainWindow {
-                background-color: #1a1a2e;
-            }
-            QFrame {
-                border: none;
-            }
-            #headerPanel {
-                background-color: #16213e;
-                border-radius: 10px;
-                min-height: 80px;
-            }
-            #controlPanel {
-                background-color: #16213e;
-                border-radius: 10px;
-            }
-            #taskPanel {
-                background-color: #1a1a2e;
-                border-radius: 8px;
-                padding: 15px;
-            }
-            #mainTitle {
-                color: #4ecca3;
-                font-size: 24px;
-                font-weight: bold;
-            }
-            #subtitle {
-                color: #a2a2a2;
-                font-size: 13px;
-            }
-            #connectionStatus {
-                color: #a2a2a2;
-                font-size: 13px;
-                padding: 5px 15px;
-                background: rgba(78, 204, 163, 0.1);
-                border-radius: 15px;
-            }
-            #sectionHeader {
-                color: #4ecca3;
-                font-size: 16px;
-                font-weight: bold;
-            }
-            #taskStatus {
-                color: #a2a2a2;
-                font-size: 13px;
-            }
-            QPushButton {
-                border: none;
-                border-radius: 6px;
-                padding: 12px;
-                font-size: 14px;
-                font-weight: bold;
-                min-width: 200px;
-            }
             QPushButton#primaryButton {
                 background-color: #4ecca3;
                 color: #1a1a2e;
-                transition: all 0.3s;
             }
             QPushButton#primaryButton:hover {
                 background-color: #45b592;
-                transform: translateY(-2px);
-            }
-            QPushButton#primaryButton:pressed {
-                background-color: #3da889;
-                transform: translateY(1px);
             }
             QPushButton#dangerButton {
                 background-color: #e74c3c;
                 color: white;
-                transition: all 0.3s;
             }
             QPushButton#dangerButton:hover {
                 background-color: #c0392b;
-                transform: translateY(-2px);
-            }
-            QPushButton#dangerButton:pressed {
-                background-color: #a93226;
-                transform: translateY(1px);
             }
             QPushButton#taskButton {
                 background-color: #1a1a2e;
                 border: 1px solid #4ecca3;
                 color: #4ecca3;
-                transition: all 0.3s;
             }
             QPushButton#taskButton:hover:enabled {
                 background-color: rgba(78, 204, 163, 0.1);
-                transform: translateY(-2px);
-            }
-            QPushButton#taskButton:pressed {
-                transform: translateY(1px);
             }
             QPushButton#taskButton:checked {
                 background-color: #4ecca3;
@@ -1328,7 +954,7 @@ class FarmRobotGUI(QMainWindow):
                 border: 1px solid #2d2d44;
                 color: #2d2d44;
             }
-        """ + self.styleSheet())  # Mevcut stilleri koru
+        """ + self.styleSheet())
 
     def create_button(self, text, object_name):
         button = QPushButton(text)
